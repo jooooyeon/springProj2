@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+
+namespace : xml 파일이 여러개일 수 있음
+이를 구별하기 위한 식별 용도로 사용됨
+ -->
+ <!-- 테이블별로 xml을 만들어줌 namespace안에 테이블명 하단의 이름으로 xml을 구별함  -->
+<mapper namespace="kr.or.ddit.mapper.MemberMapper">
+	<!-- 자주사용되는 구문을 따로 관리 -->
+	<sql id="where">
+		<!-- 전체검색 -->
+		<if test="keyword!=null and cond==''">
+			AND(
+		        MEM_ID	 LIKE '%' || #{keyword} || '%' OR
+		        MEM_NAME LIKE '%' || #{keyword} || '%' OR
+		        MEM_JOB	 LIKE '%' || #{keyword} || '%' OR
+		        MEM_LIKE LIKE '%' || #{keyword} || '%'
+ 		   )
+		</if>
+		<!-- 조건검색 -->
+		<if test="cond!=null and !cond.equals('')">
+			<choose>
+				<when test="cond=='memId'">
+					AND MEM_ID LIKE '%' || #{keyword} || '%'
+				</when>
+				<when test="cond=='memName'">
+					AND MEM_NAME LIKE '%' || #{keyword} || '%'
+				</when>
+				<when test="cond=='memJob'">
+					AND MEM_JOB LIKE '%' || #{keyword} || '%'
+				</when>
+				<when test="cond=='memLike'">
+					AND MEM_LIKE LIKE '%' || #{keyword} || '%'
+				</when>
+			</choose>
+		</if>
+	</sql>
+
+
+
+	<!-- 회원 정보 목록
+		파라미터 : hashMap : {size=10, currentPage=1}
+		파라미터 : hashMap :{size=50, currentPage=1, cond=memName, keyword=은대}
+	 -->
+	<select id="list" parameterType="hashMap" resultType="memberVO">
+		WITH T AS(
+			SELECT ROW_NUMBER() OVER(ORDER BY MEM_ID ASC) RNUM,
+			        MEM_ID, MEM_PASS, MEM_NAME, MEM_REGNO1, MEM_REGNO2, MEM_BIR, MEM_ZIP, MEM_ADD1, MEM_ADD2,
+			        MEM_HOMETEL, MEM_COMTEL, MEM_HP, MEM_MAIL, MEM_JOB, MEM_LIKE, MEM_MEMORIAL, 
+			        MEM_MEMORIALDAY, MEM_MILEAGE, MEM_DELETE
+			FROM MEMBER
+			WHERE 1 = 1
+			<include refid="where"></include>
+			)
+			
+			SELECT T.*
+			FROM T
+			WHERE T.RNUM BETWEEN (#{currentPage} * #{size}) - (#{size}-1) 
+							AND (#{currentPage} * #{size})
+			
+		<!--     WHERE T.RNUM BETWEEN (2*10) - (10-1) AND (2*10);
+				WHERE T.RNUM BETWEEN (3*10) - (10-1) AND (3*10);
+				한 화면행수=한화면에 보여질 페이지
+				시작행 : (현재 페이지 * 한 화면행수) -(한 화면행수-1)
+				종료행 : (현재 페이지 * 한화면 행수)  -->
+	</select>
+	
+	<!-- 전체 글 수 구하기 
+	byte short int(기본) long
+	float double(기본)
+	resultType에는 기본 값 중 하나 작성해야함
+	파라미터 : hashMap :{size=50, currentPage=1, cond=memName, keyword=은대}
+	
+	-->
+	<select id="getTotal" parameterType="hashMap" resultType="int">
+		SELECT COUNT(*) FROM MEMBER
+		WHERE 1 = 1
+		<include refid="where"></include>
+	</select>
+	 
+	 <!-- 회원 상세보기 -->
+	 <!-- parameterType : 들어오는것  / resultType:내보내는 것-->
+	 <select id="detail" parameterType="memberVO" resultType="memberVO">
+	 	SELECT MEM_ID, MEM_PASS, MEM_NAME, MEM_REGNO1, MEM_REGNO2, 
+		        MEM_BIR, MEM_ZIP, MEM_ADD1, MEM_ADD2, MEM_HOMETEL,
+		        MEM_COMTEL, MEM_HP, MEM_MAIL, MEM_JOB, MEM_LIKE,
+		        MEM_MEMORIAL, MEM_MEMORIALDAY, MEM_MILEAGE, MEM_DELETE
+		FROM MEMBER
+		WHERE MEM_ID = #{memId}
+	 </select>
+	 
+	 <!-- 회원 정보 변경 -->
+	 <!-- int타입 반환 생략 -->
+	 <update id="updatePost" parameterType="memberVO" >
+		 UPDATE MEMBER
+		 SET 	MEM_NAME=#{memName}, MEM_JOB=#{memJob}, MEM_LIKE=#{memLike}, 
+		    	MEM_ZIP=#{memZip}, MEM_ADD1=#{memAdd1}, MEM_ADD2=#{memAdd2}
+		 WHERE  MEM_ID = #{memId}
+	 </update>
+	 
+	 <!-- 회원정보삭제 -->
+	 <delete id="deletePost" parameterType="memberVO">
+		DELETE FROM MEMBER
+		WHERE MEM_ID = #{memId}
+	 </delete>
+	 
+	 <!-- 회원정보입력 -->
+	 <insert id="registerMember" parameterType="memberVO">
+	 	INSERT INTO MEMBER (MEM_ID, MEM_PASS, MEM_NAME, MEM_MAIL, MEM_HP, MEM_BIR, MEM_MEMORIAL )
+		VALUES(#{memId}, #{memPass}, #{memName}, #{memMail}, #{memHp}, #{memBir}, #{memMemorial})
+	 </insert>
+	 
+	 
+	 <!-- 회원 주소 정보 입력 -->
+	 <insert id="registerAddress" parameterType="addressVO" >
+		INSERT INTO ADDRESS (MEM_ID, POST_CODE, LOCATION, DET_LOCATION)
+		VALUES(#{memId}, #{postCode}, #{location}, #{detLocation})
+	 </insert>
+	 
+	 
+	 <!-- 회원 카드 정보 입력
+	 	private List<CardVO> cardVO
+	  -->
+	 <update id="registerCard" parameterType="java.util.List">
+	 	<foreach collection="list" item="cardVO" separator=" "
+	 		open="INSERT ALL" close="SELECT * FROM DUAL">
+				INTO CARD(NO, VALID_MONTH, MEM_ID) VALUES(#{cardVO.no}, #{cardVO.validMonth}, #{cardVO.memId})
+	 	</foreach>
+	 </update>
+	 
+	 <!-- 아이디 중복 체크 -->
+	 <select id="checkMemId" parameterType="memberVO" resultType="int">
+	 	SELECT COUNT(*) FROM MEMBER WHERE MEM_ID =#{memId}
+	 
+	 </select>
+	 
+	 
+	 
+	 <resultMap type="memberVO" id="memberMap">
+		<result property="memId" column="MEM_ID" /> 
+		<result property="memPass" column="MEM_PASS" /> 
+		<result property="memName" column="MEM_NAME" /> 
+		<result property="memRegno1" column="MEM_REGNO1" /> 
+		<result property="memRegno2" column="MEM_REGNO2" /> 
+		<result property="memBir" column="MEM_BIR" /> 
+		<result property="memZip" column="MEM_ZIP" /> 
+		<result property="memAdd1" column="MEM_ADD1" /> 
+		<result property="memAdd2" column="MEM_ADD2" /> <!-- CLOB가 있다면 추가 : jdbcType="CLOB" javaType="java.lang.String"  -->
+		<result property="memHometel" column="MEM_HOMETEL" /> 
+		<result property="memComtel" column="MEM_COMTEL" /> 
+		<result property="memHp" column="MEM_HP" /> 
+		<result property="memMail" column="MEM_MAIL" /> 
+		<result property="memJob" column="MEM_JOB" /> 
+		<result property="memLike" column="MEM_LIKE" /> 
+		<result property="memMemorial" column="MEM_MEMORIAL" /> 
+		<result property="memMemorialday" column="MEM_MEMORIALDAY" /> 
+		<result property="memMileage" column="MEM_MILEAGE" /> 
+		<result property="memDelete" column="MEM_DELETE" /> 
+		<result property="enabled" column="ENABLED" /> 
+		<result property="memImg" column="MEM_IMG" /> 
+		<collection property="memberAuthVOList" resultMap="memberAuthMap"></collection>
+	 </resultMap>
+	 
+	 <resultMap type="memberAuthVO" id="memberAuthMap">
+		<result property="memId" column="MEM_ID" /> 
+		<result property="auth" column="AUTH" /> 
+	 </resultMap>
+	 
+	 
+	 <!-- 회원 상세 정보 멤버테이블과 MEMBER_AUTH테이블 조인 
+	 	드루와 : memberVO {memId:admin, memPass:null, nemName:null...}
+	 	가즈아 : memberVO {memId:admin, memPass:java, nemName:뚜연..., 
+	 			memberAuthVOList[memberAuthVO[memId:admin,auth:ROLE_MEMBER], memberAuthVO[memId:admin,auth:ROLE_ADMIN]]}
+	 -->
+	 <select id="detailMember" parameterType="memberVO" resultMap="memberMap">
+		SELECT	A.MEM_ID, A.MEM_PASS, A.MEM_NAME, A.MEM_REGNO1, A.MEM_REGNO2, 
+				A.MEM_BIR, A.MEM_ZIP, A.MEM_ADD1, A.MEM_ADD2, A.MEM_HOMETEL, 
+				A.MEM_COMTEL, A.MEM_HP, A.MEM_MAIL, A.MEM_JOB, A.MEM_LIKE, 
+				A.MEM_MEMORIAL, A.MEM_MEMORIALDAY, A.MEM_MILEAGE, A.MEM_DELETE, A.ENABLED, A.MEM_IMG, 
+				B.AUTH
+		FROM	MEMBER A, MEMBER_AUTH B
+		WHERE	A.MEM_ID = B.MEM_ID
+		AND		A.MEM_ID =#{memId}
+	 </select>
+	 
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

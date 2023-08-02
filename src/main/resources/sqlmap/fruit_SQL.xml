@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+
+namespace : xml 파일이 여러개일 수 있음
+이를 구별하기 위한 식별 용도로 사용됨
+ -->
+ <!-- 테이블별로 xml을 만들어줌 namespace안에 테이블명  -->
+<mapper namespace="kr.or.ddit.mapper.FruitMapper">
+	<!-- 과일 /채소 목록 -->
+	<select id="selectFruit" parameterType="String" resultType="fruitVO">
+		SELECT FRUIT_ID, FRUIT_NAME, FRUIT_AMOUNT, FRUIT_GUBUN
+		FROM FRUIT
+		WHERE FRUIT_GUBUN LIKE '%' || #{fruitGubun} || '%'
+	</select>
+	 
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,20 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8"%>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%>
+<script type="text/javascript" src="/resources/js/jquery-3.6.4.min.js"></script>
+<section class="content">
+	<div class="error-page">
+		<h2 class="headline text-warning">errorException</h2>
+		<div class="error-content">
+			<h3>
+				<i class="fas fa-exclamation-triangle text-warning"></i> 
+				${SPRING_SECURITY_403_EXCEPTION.getMessage()}
+			</h3>
+			<p>
+				${msg}
+			</p>
+			
+		</div>
+
+	</div>
+
+</section>

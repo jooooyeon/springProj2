@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+
+namespace : xml 파일이 여러개일 수 있음
+이를 구별하기 위한 식별 용도로 사용됨
+ -->
+ <!-- 테이블별로 xml을 만들어줌 namespace안에 테이블명 하단의 이름으로 xml을 구별함  -->
+<mapper namespace="member2">
+
+	<insert id="regist" parameterType="memberVO2">
+		INSERT INTO MEMBER2 (USER_ID, PASSWORD, COIN, DATEOFBIRTH, NATIONALITY, CARS, FOODS, HOBBYS, JOBS)
+		VALUES(#{userId},#{password},#{coin},#{dateOfBirth},#{nationality},#{cars},#{foods},#{hobbys},#{jobs})
+	</insert>
+	
+	<insert id="registAddress" parameterType="memberVO2">
+		INSERT INTO ADDRESS(USER_ID, POSTCODE, LOCATION, DETLOCATION)
+		VALUES (#{userId},#{address.postCode},#{address.location},#{address.detLocation})
+	</insert>
+	
+	<insert id="registBital" parameterType="memberVO2">
+		INSERT INTO BITAL(USER_ID, HEIGHT, WEIGHT, SIGHT, PRESSURE, BLOOD_TYPE)
+		VALUES (#{userId},#{bital.height},#{bital.weight},#{bital.sight},#{bital.pressure},#{bital.bloodType})
+	</insert>
+	
+	<!-- 카드 등록 
+		다중 INSERT시 UPDATE태그를 사용함
+		들어오ㅏ : memberVO2.cardList -> List<CardVO>
+		가즈아 : insert, update, delete의 경우 resultType은 생략
+	 -->
+	<update id="registCard" parameterType="java.util.List">
+	      <foreach collection="list" item="cardVO"
+	         open="INSERT ALL" close="SELECT * FROM DUAL" separator=" ">
+	         INTO CARD(NO, USER_ID, VALID_MONTH) 
+	         VALUES(#{cardVO.no},#{cardVO.userId},#{cardVO.validMonth}) 
+	      </foreach>
+	</update>
+	
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

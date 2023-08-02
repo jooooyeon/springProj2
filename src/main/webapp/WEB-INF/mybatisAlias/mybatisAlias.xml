@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE configuration PUBLIC "-//mybatis.org//DTD Config 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+	<!-- 
+		[MyBatis] 스프링에서는 테이블의 "_(언더바/언더스코어)"를 사용한 컬럼명을 사용시(BOOK 테이블의 BOOK_ID)
+		카멜케이스로 읽어줌(bookId)
+		BookVo의 멤버변수도 bookId, jsp의 <input type="text name="bookId".. 
+	 -->
+	 <settings>
+	 	<setting name="mapUnderscoreToCamelCase" value="true"/>
+	 </settings>
+	 <!-- 자주사용하는 타입의 별칭을 세팅 -->
+	 <!-- book_SQL에서 <insert id="insert" parameterType="bookVO">로 별칭사용가능 -->
+	 <typeAliases>
+	 	<typeAlias type="kr.or.ddit.vo.BookVO" alias="bookVO"/>
+	 	<typeAlias type="kr.or.ddit.vo.MemberVO" alias="memberVO"/>
+	 	<typeAlias type="kr.or.ddit.vo.MemberAuthVO" alias="memberAuthVO"/>
+	 	<typeAlias type="kr.or.ddit.vo.MemberVO2" alias="memberVO2"/>
+	 	<typeAlias type="kr.or.ddit.vo.ItemVO" alias="itemVO"/>
+	 	<typeAlias type="kr.or.ddit.vo.Item3VO" alias="item3VO"/>
+	 	<typeAlias type="kr.or.ddit.vo.ItemAttachVO" alias="itemAttachVO"/>
+	 	<typeAlias type="kr.or.ddit.vo.AddressVO" alias="addressVO"/>
+	 	<typeAlias type="kr.or.ddit.vo.CardVO" alias="cardVO"/>
+	 	<typeAlias type="kr.or.ddit.vo.FruitVO" alias="fruitVO"/>
+	 </typeAliases>
+</configuration>

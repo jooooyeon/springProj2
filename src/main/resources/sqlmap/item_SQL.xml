@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+
+namespace : xml 파일이 여러개일 수 있음
+이를 구별하기 위한 식별 용도로 사용됨
+ -->
+ <!-- 테이블별로 xml을 만들어줌 namespace안에 테이블명  -->
+<mapper namespace="kr.or.ddit.mapper.ItemMapper">
+<!-- insert/update/delete의 resultType은 생략
+		merge into
+		ITEM_ID=0로 시작함?
+		신규 등록시 ITEM_ID = 마지막숫자+1 : NOT MATCHED
+		{itemId=0&itemName=초코파이&price=2000&picture=파일객체&description=초코파이는 맛있다}
+		수정모드 시 ITEM_ID = 기존의 데이터 : MATCHED
+		{itemId=1&itemName=초코파이&price=2000&picture=파일객체&description=초코파이는 맛있다}
+
+ -->
+	<insert id="create" parameterType="itemVO">
+ 		<selectKey resultType="int" order="AFTER" keyProperty="itemId">
+			SELECT SEQ_ITEM.CURRVAL FROM DUAL
+		</selectKey> 
+		MERGE INTO ITEM A
+		USING DUAL ON(A.ITEM_ID=#{itemId})
+		WHEN MATCHED THEN
+		    UPDATE SET ITEM_NAME=#{itemName}, PRICE=#{price}, DESCRIPTION=#{description}
+		    <if test="pictureUrl!=null and pictureUrl!=''">
+		    , PICTURE_URL=#{pictureUrl}
+		    </if> 
+		WHEN NOT MATCHED THEN
+		    INSERT(ITEM_ID, ITEM_NAME, PRICE, DESCRIPTION, PICTURE_URL)
+		    VALUES(SEQ_ITEM.NEXTVAL,#{itemName},#{price},#{description},#{pictureUrl})
+	</insert>
+	
+	<insert id="create2" parameterType="itemVO">
+ 		<selectKey resultType="int" order="AFTER" keyProperty="itemId">
+			SELECT SEQ_ITEM.CURRVAL FROM DUAL
+		</selectKey> 
+		MERGE INTO ITEM2 A
+		USING DUAL ON(A.ITEM_ID=#{itemId})
+		WHEN MATCHED THEN
+		    UPDATE SET ITEM_NAME=#{itemName}, PRICE=#{price}, DESCRIPTION=#{description}
+		    <if test="pictureUrl!=null and pictureUrl!=''">
+		    , PICTURE_URL=#{pictureUrl}
+		    </if> 
+		    <if test="pictureUrl2!=null and pictureUrl2!=''">
+		    , PICTURE_URL2=#{pictureUrl2}
+		    </if> 
+		WHEN NOT MATCHED THEN
+		    INSERT(ITEM_ID, ITEM_NAME, PRICE, DESCRIPTION, PICTURE_URL,PICTURE_URL2)
+		    VALUES(SEQ_ITEM.NEXTVAL,#{itemName},#{price},#{description},#{pictureUrl},#{pictureUrl2})
+	</insert>
+	
+		<!-- INSERT INTO ITEM(ITEM_ID, ITEM_NAME, PRICE, DESCRIPTION, PICTURE_URL)
+		VALUES(#{itemId},#{itemName},#{price},#{description},#{pictureUrl}) -->
+	 
+	 <!-- 상세보기
+	 들어올때 : itemVO : ItemVO(itemId=1, itemName=null, price=0, description=null, pictureUrl=null, picture=null)
+	 resultType 반환?
+	나갈때 : itemVO : ItemVO(itemId=1, itemName=카스테라, price=12000, description="<p>짱구가 좋아하는 카스테라</p>
+", pictureUrl=null, picture=null)
+	 
+	  -->
+	<select id="detail" parameterType="itemVO" resultType="itemVO">
+		SELECT ITEM_ID, ITEM_NAME, PRICE, DESCRIPTION, PICTURE_URL,NULL PICTURE_URL2
+		FROM ITEM
+		WHERE ITEM_ID= #{itemId}
+		UNION ALL
+		SELECT ITEM_ID, ITEM_NAME, PRICE, DESCRIPTION, PICTURE_URL,PICTURE_URL2
+		FROM ITEM2
+		WHERE ITEM_ID= #{itemId}
+	</select>
+	
+	
+	<!-- 목록보기 -->
+	<select id="list" resultType="itemVO">
+		SELECT ROW_NUMBER()OVER(ORDER BY T.ITEM_ID DESC)RNUM, 
+			T.ITEM_ID, T.ITEM_NAME, T.PRICE, T.DESCRIPTION, T.PICTURE_URL,
+			T.PICTURE_URL2,T.DEL_YN
+		FROM
+		(
+			SELECT ITEM_ID, ITEM_NAME, PRICE, DESCRIPTION, PICTURE_URL,NULL PICTURE_URL2,DEL_YN
+			FROM ITEM
+			WHERE (DEL_YN IS NULL OR DEL_YN !='Y')
+			UNION ALL
+			SELECT ITEM_ID, ITEM_NAME, PRICE, DESCRIPTION, PICTURE_URL,PICTURE_URL2, NULL DEL_YN
+			FROM ITEM2
+		)T
+		
+	</select>
+	
+	<!-- 상품 삭제 -->
+	<update id="deletePost" parameterType="itemVO">
+		UPDATE ITEM
+		SET DEL_YN='Y'
+		WHERE ITEM_ID = #{itemId}
+	</update>
+	
+	<!-- 1) 상품(ITEM3)테이블에 insert -->
+	<insert id="insertItem3" parameterType="item3VO">
+		<selectKey resultType="int" order="BEFORE" keyProperty="itemId">
+			SELECT NVL(MAX(ITEM_ID),0) + 1 FROM ITEM3
+		</selectKey>
+		INSERT INTO ITEM3(ITEM_ID, ITEM_NAME, PRICE, DESCRIPTION)
+		VALUES(
+		  #{itemId},#{itemName},#{price},#{description}
+		)
+	</insert>
+	
+
+	<!-- 2) ITEM_ATTACH 테이블에 insert
+		MultipartFile[] pictures =  itemVO.getPictures();
+		ITEM_ID : item3VO.getItemID()
+		SEQ : 자동증가
+		FULLNAME : pictures.getoriginalFilename()
+		REGDATE : sysdate?
+		결국 : List<ITEM_ATTACH>로만들어서 뿌려줌? 리스트로 넘어옴!
+	 -->
+	<update id="insertItemAttach" parameterType="java.util.List">
+		<foreach collection="list" item="itemAttachVO"
+		open="INSERT ALL" close="SELECT * FROM DUAL" separator=" ">
+		    INTO ITEM_ATTACH(ITEM_ID, SEQ, FULLNAME, REGDATE)
+		    VALUES(#{itemAttachVO.itemId},#{itemAttachVO.seq},#{itemAttachVO.fullname},sysdate)
+		</foreach>
+	
+	</update>
+	
+	<resultMap type="item3VO" id="item3Map" >
+	<!-- item3테이블1 -->
+		<result property="itemId" column="ITEM_ID"/>
+		<result property="itemName" column="ITEM_NAME"/>
+		<result property="price" column="PRICE"/>
+		<result property="description" column="DESCRIPTION" jdbcType="CLOB" javaType="java.lang.String" />
+		<!-- item_attach테이블N -->
+		<collection property="itemAttachVOList" resultMap="itemAttachMap"></collection>
+	</resultMap>
+	
+	<!--  중첩된 자바빈, 1대 다-->
+	<resultMap type="itemAttachVO" id="itemAttachMap">
+		<result property="itemId" column="ITEM_ID"/>
+		<result property="seq" column="SEQ"/>
+		<result property="fullname" column="FULLNAME"/>
+		<result property="regdate" column="REGDATE"/>
+
+	</resultMap>
+	
+	<!-- 상품상세 
+	1 : N의 조인 쿼리 사용시 resultMap을 사용함
+	
+	ITEM3 테이블의 description 컬럼의 자료형이 CLOB
+	CLOB 타입의 데이터를 MyBatis를 이용해서 처리할 때는 resultMap 태그를 만들고 타입을 지정해 줘야 함. CLOB 자료형을 String 타입으로 매칭
+	java database connectivity의 type : CLOB
+	java type : java.lang.String
+	-->
+	<select id="detailMulti" parameterType="item3VO" resultMap="item3Map">
+		WITH T AS
+		(
+		SELECT A.ITEM_ID, A.ITEM_NAME, A.PRICE, A.DESCRIPTION
+		    , B.SEQ, B.FULLNAME, B.REGDATE
+		FROM ITEM3 A, ITEM_ATTACH B
+		WHERE A.ITEM_ID = B.ITEM_ID
+		)
+		SELECT T.ITEM_ID, T.ITEM_NAME, T.PRICE, T.DESCRIPTION
+		    , T.SEQ, T.FULLNAME, T.REGDATE
+		FROM T
+		WHERE T.ITEM_ID = #{itemId}
+	</select>
+	
+	<!-- 멀티 이미지 목록 -->
+	<select id="multiList" resultMap="item3Map">
+		WITH T AS
+		(
+		SELECT A.ITEM_ID, A.ITEM_NAME, A.PRICE, A.DESCRIPTION
+		    , B.SEQ, B.FULLNAME, B.REGDATE
+		FROM ITEM3 A, ITEM_ATTACH B
+		WHERE A.ITEM_ID = B.ITEM_ID
+		)
+		SELECT T.ITEM_ID, T.ITEM_NAME, T.PRICE, T.DESCRIPTION
+		    , T.SEQ, T.FULLNAME, T.REGDATE
+		FROM T
+	</select>
+	
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
